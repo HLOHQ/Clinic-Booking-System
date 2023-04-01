@@ -50,9 +50,9 @@ CREATE TABLE IF NOT EXISTS `appointment` (
 -- Dumping data for table `appointment`
 --
 INSERT INTO `appointment` (`clinicName`, `nric`, `mobile`, `name`, `address`, `dob`, `datetime`) VALUES
-('Complete Healthcare International', 'T0123456A', '+6597801945', 'John Tan', 'BUKIT BATOK STREET 25', '1994-04-12', '2023-01-04 09:18:44'),
-('Orchard Group Clinic', 'T0122222A', '+6597801945', 'Joe Lee', '10 BRADDELL HILL', '2000-01-30', '2023-02-18 10:02:35'),
-('Tanglin Medical Clinic', 'T0333333A', '+6597801945', 'Mary Goh', '148 GANGSA ROAD', '1990-08-09', '2023-03-04 13:02:45'),
-('Complete Healthcare International', 'T0109111G', '+6597801945', 'Matilda Lim', 'JURONG EAST STREET 21', '1987-07-17', '2022-12-23 16:02:34'),
-('UNIHEALTH 24-HR CLINIC (JURONG EAST)', 'T0213921S', '+6597801945', 'William Tan', 'TELOK BLANGAH STREET 31', '1995-09-23', '2023-01-11 11:02:13');
+('Complete Healthcare International', 'S9423456A', '+6597801945', 'John Tan', 'BUKIT BATOK STREET 25', '1994-04-12', '2023-01-04 09:18:44'),
+('Orchard Group Clinic', 'T0022222A', '+6597801945', 'Joe Lee', '10 BRADDELL HILL', '2000-01-30', '2023-02-18 10:02:35'),
+('Tanglin Medical Clinic', 'S9033333A', '+6597801945', 'Mary Goh', '148 GANGSA ROAD', '1990-08-09', '2023-03-04 13:02:45'),
+('Complete Healthcare International', 'S8709111G', '+6597801945', 'Matilda Lim', 'JURONG EAST STREET 21', '1987-07-17', '2022-12-23 16:02:34'),
+('UNIHEALTH 24-HR CLINIC (JURONG EAST)', 'S9513921S', '+6597801945', 'William Tan', 'TELOK BLANGAH STREET 31', '1995-09-23', '2023-01-11 11:02:13');
 COMMIT;

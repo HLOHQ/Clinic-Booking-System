@@ -1,0 +1,175 @@
+version: "3.8"
+
+volumes:
+  rabbitmq_data:
+
+services:
+ 
+  ###################################
+  # Appointment: The Appointment microservice
+  ###################################
+  appointment:
+    build:
+      context: ./
+      dockerfile: appointment.Dockerfile
+    image: ciara1940/appointment:g2t7
+    restart: always
+    environment:
+      dbURL: mysql+mysqlconnector://is213@host.docker.internal:3306/appointment
+      PYTHONUNBUFFERED: 1
+
+  ##############################################
+  # Appointment: The Appointment microservice
+  ##############################################
+  book_appointment:
+    build:
+      context: ./
+      dockerfile: book_appointment.Dockerfile
+    image: ciara1940/book_appointment:g2t7
+    restart: always
+    depends_on:
+      - appointment
+      - rabbitmq
+      - error
+      - Notification
+    environment:
+      rabbit_host: rabbitmq
+      rabbit_port: 5672
+      appointmentrecord_URL: "http://127.0.0.1:5000/appointment/<string:clinicName>"
+      notification_URL: "http://127.0.0.1:5000/notification"
+      PYTHONUNBUFFERED: 1
+    ports:
+      - "5100:5100"
+
+
+  ###################################
+  # Error: The Error microservice
+  ###################################
+  error:
+    build:
+      context: ./
+      dockerfile: error.Dockerfile
+    image: ciara1940/error:g2t7
+    restart: always
+    depends_on:
+      - rabbitmq
+    environment:
+      rabbit_host: rabbitmq
+      rabbit_port: 5672
+      PYTHONUNBUFFERED: 1
+
+  ####################################
+  # RabbitMQ: The messaging broker   
+  ####################################
+  rabbitmq:
+    image: rabbitmq:3-management
+    hostname: esd-rabbit
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes: 
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  ###################################
+  # Notification: The Notification microservice
+  ###################################
+  Notification:
+    build:
+      context: ./
+      dockerfile: notification.Dockerfile
+    image: ciara1940/notification:g2t7
+    restart: always
+    depends_on:
+      - rabbitmq
+    environment:
+      rabbit_host: rabbitmq
+      rabbit_port: 5672
+      PYTHONUNBUFFERED: 1
+
+    ###################################
+  # Error: The Error microservice
+  ###################################
+  # error:
+  #   build:
+  #     context: ./
+  #     dockerfile: error.Dockerfile
+  #   image: hannahloh/error:esd
+  #   restart: always
+  #   depends_on:
+  #     - rabbitmq
+  #   environment:
+  #     rabbit_host: rabbitmq
+  #     rabbit_port: 5672
+  #     PYTHONUNBUFFERED: 1
+      
+  #################################################
+  # Activity Log: The Activity Log microservice
+  #################################################
+  # activity_log:
+  #   build:
+  #     context: ./
+  #     dockerfile: activity_log.Dockerfile
+  #   image: hannahloh/activity_log:esd
+  #   restart: always
+  #   depends_on:
+  #     - rabbitmq
+  #   environment:
+  #     rabbit_host: rabbitmq
+  #     rabbit_port: 5672
+  #     PYTHONUNBUFFERED: 1
+
+  ###################################
+  # Error: The Error microservice
+  ###################################
+  # error:
+  #   build:
+  #     context: ./
+  #     dockerfile: error.Dockerfile
+  #   image: hannahloh/error:esd
+  #   restart: always
+  #   depends_on:
+  #     - rabbitmq
+  #   environment:
+  #     rabbit_host: rabbitmq
+  #     rabbit_port: 5672
+  #     PYTHONUNBUFFERED: 1
+
+  ###############################################
+  # Place Order: The Place Order microservice
+  ###############################################
+  # place_order:
+  #   build:
+  #     context: ./
+  #     dockerfile: place_order.Dockerfile
+  #   image: hannahloh/place_order:esd
+  #   restart: always
+  #   depends_on:
+  #     - order
+  #     - shipping_record
+  #     - activity_log
+  #     - error
+  #     - rabbitmq
+  #   environment:
+  #     rabbit_host: rabbitmq
+  #     rabbit_port: 5672
+  #     order_URL: http://order:5001/order
+  #     shipping_record_URL: http://shipping_record:5002/shipping_record 
+  #     PYTHONUNBUFFERED: 1
+  #   ports:
+  #     - "5100:5100"
+
+  ##################################
+  # Book: The Book microservice
+  ##################################
+  # book:
+  #   build:
+  #     context: ./
+  #     dockerfile: book.Dockerfile
+  #   image: hannahloh/book:esd
+  #   restart: always
+  #   environment:
+  #     dbURL: mysql+mysqlconnector://is213@host.docker.internal:3308/book
+  #     PYTHONUNBUFFERED: 1
+  #   ports:
+  #     - "5000:5000"

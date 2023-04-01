@@ -15,7 +15,7 @@ appointment_details = {
             "clinicName": "Complete Hospital International",
             "datetime": "2022-07-02 10:45:30",
             "name": "Margaret Lim",
-            "email": "doctorasap2023@gmail.com",
+            "mobile": "+6597801945",
             "address": "170 UPPER BUKIT TIMAH ROAD",
             "dob": "1996-10-10",
             "nric": "S9650951A"

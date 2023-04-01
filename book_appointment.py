@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from datetime import datetime
 
 import os, sys
 
@@ -10,10 +11,11 @@ import amqp_setup
 import pika
 import json
 
+
 app = Flask(__name__)
 CORS(app)
 
-appointmentrecord_URL = f"http://127.0.0.1:5000/appointment/<string:clinicName>"
+appointmentrecord_URL = "http://127.0.0.1:5000/appointment"
 notification_URL = "http://127.0.0.1:5000/notification"
 
 
@@ -23,6 +25,12 @@ def book_appointment():
     if request.is_json:
         try:
             appointment = request.get_json()
+            datetime = appointment['datetime']
+            print(datetime)
+            date_format = "%Y-%m-%d %H:%M"
+            datetime_var = datetime.strptime(datetime, date_format)
+            print(datetime_var)
+            appointment['datetime'] = datetime_var
             print("\nReceived an appointment record in JSON:", appointment)
 
             # do the actual work
@@ -50,6 +58,41 @@ def book_appointment():
         "code": 400,
         "message": "Invalid JSON input: " + str(request.get_data())
     }), 400
+
+@app.route("/delete_appointment/<int:appointmentID>", methods=['DELETE'])
+def delete_appointment(appointmentID):
+        # Simple check of input format and data of the request are JSON
+    if request.is_json:
+        try:
+            appointment = request.get_json()
+            print("\nReceived an appointment record in JSON:", appointment)
+
+            # do the actual work
+            # 1. Send order info {cart items}
+            
+            result = processDeleteAppointment(appointmentID)
+            print('\n------------------------')
+            print('\nresult: ', result)
+            return jsonify(result), result["code"]
+
+        except Exception as e:
+            # Unexpected error in code
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            ex_str = str(e) + " at " + str(exc_type) + ": " + fname + ": line " + str(exc_tb.tb_lineno)
+            print(ex_str)
+
+            return jsonify({
+                "code": 500,
+                "message": "delete_appointment.py internal error: " + ex_str
+            }), 500
+
+    # if reached here, not a JSON request.
+    return jsonify({
+        "code": 400,
+        "message": "Invalid JSON input: " + str(request.get_data())
+    }), 400
+
 
 
 def processBookAppointment(appointment):
@@ -98,10 +141,10 @@ def processBookAppointment(appointment):
         # 4. Record new appointment
         # record the activity log anyway
         #print('\n\n-----Invoking activity_log microservice-----')
-        print('\n\n-----Publishing the (appointment info) message with routing_key=appointment.info-----')        
+        print('\n\n-----Publishing the (appointment info) message with routing_key=#-----')        
 
         # invoke_http(activity_log_URL, method="POST", json=order_result)            
-        amqp_setup.channel.basic_publish(exchange=amqp_setup.exchangename, routing_key="appointment.info", 
+        amqp_setup.channel.basic_publish(exchange=amqp_setup.exchangename, routing_key="#", 
             body=message)
     
     print("\nAppointment published to RabbitMQ Exchange.\n")
@@ -123,6 +166,76 @@ def processBookAppointment(appointment):
         }
     }
 
+def processDeleteAppointment(appointmentID):
+    # 1. Retrieve the appointment information
+    # Invoke the appointmentrecord microservice
+    print('\n-----Invoking appointmentrecord microservice-----')
+    appointmentrecord_URL = f"http://127.0.0.1:5000/appointment/{appointmentID}"
+    appointment_result = invoke_http(appointmentrecord_URL)
+    print('appointment_result:', appointment_result)
+
+    # Check the appointment result; if a failure, send it to the error microservice.
+    code = appointment_result["code"]
+    message = json.dumps(appointment_result)
+
+    if code not in range(200, 300):
+        # Inform the error microservice
+        print('\n\n-----Publishing the (appointment error) message with routing_key=booking.error-----')
+
+        amqp_setup.channel.basic_publish(exchange=amqp_setup.exchangename, routing_key="booking.error", 
+            body=message, properties=pika.BasicProperties(delivery_mode = 2)) 
+
+        print("\nAppointment retrieval status ({:d}) published to the RabbitMQ Exchange:".format(
+            code), appointment_result)
+
+        # Return error
+        return {
+            "code": 500,
+            "data": {"appointment_result": appointment_result},
+            "message": "Appointment retrieval failure sent for error handling."
+        }
+
+    # Send appointment information to "appointment.info" queue
+    print('\n\n-----Publishing the (appointment info) message with routing_key=#-----')
+    amqp_setup.channel.basic_publish(exchange=amqp_setup.exchangename, routing_key="#", 
+        body=message)
+
+    # Delete the appointment
+    # Invoke the appointmentrecord microservice
+    print('\n-----Invoking appointmentrecord microservice-----')
+    appointment_result = invoke_http(appointmentrecord_URL, method='DELETE', json=appointmentID)
+    print('appointment_result:', appointment_result)
+
+    # Check the appointment result; if a failure, send it to the error microservice.
+    code = appointment_result["code"]
+    message = json.dumps(appointment_result)
+
+    if code not in range(200, 300):
+        # Inform the error microservice
+        print('\n\n-----Publishing the (appointment error) message with routing_key=booking.error-----')
+
+        amqp_setup.channel.basic_publish(exchange=amqp_setup.exchangename, routing_key="booking.error", 
+            body=message, properties=pika.BasicProperties(delivery_mode = 2)) 
+
+        print("\nAppointment deletion status ({:d}) published to the RabbitMQ Exchange:".format(
+            code), appointment_result)
+
+        # Return error
+        return {
+            "code": 500,
+            "data": {"appointment_result": appointment_result},
+            "message": "Appointment deletion failure sent for error handling."
+        }
+
+    print("\nAppointment information and deletion status published to RabbitMQ Exchange.\n")
+
+    return {
+        "code": 201,
+        "message": "Your appointment has been successfully cancelled",
+        "data": {
+            "appointment_result": appointment_result
+        }
+    }
 
 # Execute this program if it is run as a main script (not by 'import')
 if __name__ == "__main__":

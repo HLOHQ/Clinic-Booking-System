@@ -19,6 +19,7 @@ def receiveNotification():
 
 def handle_notification(body):
     appointment = json.loads(body)
+    print(appointment)
     if 'data' in appointment:
         data = appointment['data']
         mobile = data['mobile']
@@ -27,16 +28,15 @@ def handle_notification(body):
         datetime = data['datetime']
         status = appointment['code']
         account_sid = "ACefec66bc804dfb402d99d144b257f64b"
-        auth_token = "02f493127c4a7191f1e1ba166af0129f"
+        auth_token = "acd0f3543b83baf266da2bb694fd3c10"
         client = Client(account_sid, auth_token)
         message = client.messages.create(
         body= f"Hello {name}, your appointment on {datetime} is confirmed. Your appointment ID is {appointmentID}.",
         from_="+15076691400",
         to = f"{mobile}",)
-
         print(message.sid)
 
-        amqp_setup.channel.basic_publish(exchange=amqp_setup.exchangename, routing_key="notification", body=json.dumps({
+        amqp_setup.channel.basic_publish(exchange=amqp_setup.exchangename, routing_key="#", body=json.dumps({
                                             "appointmentID": appointmentID,
                                             "mobile": mobile,
                                             "name": name,
@@ -44,12 +44,16 @@ def handle_notification(body):
                                         }))
 
 def callback(channel, method, properties, body):
-    print("\nReceived an notification from " + __file__)
-    # if status == '200':
+    print("\nReceived a notification from " + __file__)
+    json_obj = json.loads(body)
+    print("this is the body:", json_obj)
+    # if json_obj['status'] == 201:
     handle_notification(body)
+
     print()
 
 if __name__ == "__main__":  # execute this program only if it is run as a script (not by 'import')    
     print("\nThis is " + os.path.basename(__file__), end='')
     print(": monitoring routing key '{}' in exchange '{}' ...".format(monitorBindingKey, amqp_setup.exchangename))
+    amqp_setup.check_setup()
     receiveNotification()
